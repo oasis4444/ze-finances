@@ -211,6 +211,14 @@ main{padding:22px 32px 110px;max-width:1240px;width:100%;margin:0 auto}
 .sw span{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--muted);white-space:nowrap}
 .colorin{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
 .colorin input{width:44px;height:36px;border:1px solid var(--line);border-radius:10px;padding:2px;background:var(--surface2);cursor:pointer}
+/* Catégories */
+.newcat{display:none;gap:8px;align-items:center;margin-top:8px}
+.newcat.show{display:flex}
+.newcat .ncemo{width:58px;text-align:center;font-size:18px;padding:8px}
+.newcat .ncname{flex:1;padding:9px 12px}
+.linkbtn.sm{font-size:13px;margin-top:6px;padding:0;text-align:left}
+.catx{border:0;background:none;color:inherit;font-size:16px;line-height:1;cursor:pointer;padding:0 0 0 4px;opacity:.7}
+.catx:hover{opacity:1}
 /* Login */
 body.locked .side,body.locked .bnav,body.locked .fab{display:none!important}
 body.locked .app{grid-template-columns:1fr}
@@ -336,13 +344,19 @@ const P={
 const ic=(n,extra='')=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${P[n]}</svg>`;
 
 /* ============ Référentiels ============ */
-const INC_TYPES={salaire:['Salaire','💼'],commerce:['Commerce','🏪'],extra:['Activité supplémentaire','⚡'],cadeau:['Cadeau','🎁'],autre:['Autre entrée','➕']};
-const CATS={
+const BASE_INC={salaire:['Salaire','💼'],commerce:['Commerce','🏪'],extra:['Activité supplémentaire','⚡'],cadeau:['Cadeau','🎁'],autre:['Autre entrée','➕']};
+const BASE_CATS={
  alimentation:['Alimentation & courses','🛒'], quotidien:['Dépenses quotidiennes','☕'], loyer:['Loyer','🏠'],
  energie:['Électricité & eau','💡'], internet:['Internet & téléphone','📶'], transport:['Transport','🚌'],
  sante:['Santé','💊'], vetements:['Vêtements','👗'], loisirs:['Loisirs','🎉'],
  famille:['Aide parents & famille','🤝'], travaux:['Travaux maison','🧱'], exceptionnel:['Exceptionnel & imprévu','⚠️'], autre:['Autre','📦']
 };
+let CATS=BASE_CATS, INC_TYPES=BASE_INC;
+function refreshCats(){
+  const c=(typeof S!=='undefined'&&S.cfg?.customCats)||{};
+  const build=(base,extra)=>{const {autre,...rest}=base;return {...rest,...(extra||{}),autre}};
+  CATS=build(BASE_CATS,c.exp);INC_TYPES=build(BASE_INC,c.inc);
+}
 const GOAL_KINDS={terrain:['Terrain','🏞️'],maison:['Maison','🏡'],voiture:['Voiture','🚗'],voyage:['Voyage','✈️'],investissement:['Investissement','📈'],urgence:["Fonds d'urgence",'🛟'],autre:['Autre projet','🎯']};
 const PRESETS=[['Rose','#e0457b','#8b5cf6'],['Émeraude','#0f9f6e','#0891b2'],['Océan','#2563eb','#06b6d4'],['Améthyste','#7c3aed','#db2777'],['Or','#b7791f','#e0457b'],['Corail','#ea580c','#e11d48'],['Nuit','#334155','#6366f1'],['Menthe','#0d9488','#84cc16']];
 const VIEWS=[['accueil','Tableau de bord','home'],['revenus','Revenus','inc'],['depenses','Dépenses','exp'],['epargne','Épargne','piggy'],['projets','Nos projets','target'],['budget','Budget','pie'],['reglages','Paramètres','gear']];
@@ -718,6 +732,12 @@ function vReglages(){
     <div class="prof"><div class="logo" style="width:64px;height:64px">${logoHTML()}</div><div class="grow"><b>Logo : photo du couple</b><div class="small muted">Affichée sur le tableau de bord</div></div><label class="btn sm ghost filebtn">Choisir<input type="file" accept="image/*" data-act="photo" data-k="couple"></label></div>
     ${['z','e'].map(k=>`<div class="prof">${avatar(k,'lg')}<div class="grow"><div class="frow"><input class="inp" value="${esc(c.names?.[k]||'')}" placeholder="Prénom" data-act="name" data-k="${k}"><input class="inp" value="${esc(c.roles?.[k]||'')}" placeholder="Rôle" data-act="role" data-k="${k}"></div></div><label class="btn sm ghost filebtn">Photo<input type="file" accept="image/*" data-act="photo" data-k="${k}"></label></div>`).join('')}
     <div class="f"><label>Devise / slogan</label><input value="${esc(c.tagline||'')}" data-act="tagline"></div></div>
+   <div class="card span2"><div class="hd"><h3>🏷️ Catégories</h3><span class="small muted">Ajoutez vos propres catégories</span></div>
+    <div class="grid g2">${[['exp','Dépenses',BASE_CATS,CATS],['inc','Sources de revenus',BASE_INC,INC_TYPES]].map(([kd,lab,base,all])=>`<div>
+     <h4 style="font-size:14px;margin-bottom:8px">${lab}</h4>
+     <div class="chips" style="margin-bottom:12px">${Object.entries(all).map(([k,v])=>base[k]?`<span class="chip" style="cursor:default">${v[1]} ${esc(v[0])}</span>`:`<span class="chip on" style="cursor:default">${esc(v[1])} ${esc(v[0])}<button class="catx" data-act="delcat" data-kind="${kd}" data-k="${k}" title="Supprimer">×</button></span>`).join('')}</div>
+     <div class="newcat show" data-kind="${kd}"><input class="inp ncemo" maxlength="4" placeholder="🏷️"><input class="inp ncname" placeholder="Nouvelle catégorie…"><button type="button" class="btn sm" data-act="addcat" data-kind="${kd}">${ic('plus')}Ajouter</button></div></div>`).join('')}</div>
+    <p class="small muted" style="margin-top:10px">Les catégories ajoutées sont partagées entre vos deux comptes. Elles apparaissent aussi dans le budget et les rapports.</p></div>
    <div class="card"><div class="hd"><h3>${ic('dl','width=18 height=18')} Exporter & sauvegarder</h3></div>
     <div class="chips"><button class="btn" data-act="xlsx">${ic('dl')}Excel (.xlsx)</button><button class="btn ghost" data-act="pdf">${ic('dl')}Rapport PDF du mois</button><button class="btn ghost" data-act="backup">${ic('dl')}Sauvegarde complète (.json)</button>
     <label class="btn ghost filebtn">Restaurer une sauvegarde<input type="file" accept=".json,application/json" data-act="restore"></label></div>
@@ -734,6 +754,7 @@ function vReglages(){
 
 /* ============ Rendu ============ */
 function draw(){
+  refreshCats();
   const locked=mode==='cloud'&&authState!=='in';document.body.classList.toggle('locked',locked);
   if(locked){const k=authState+'|'+loginMsg+'|'+(S.photos?.couple||'').length;if(draw.k!==k||!$('#main .login')){draw.k=k;$('#main').innerHTML=loginHTML()}return}
   draw.k=null;
@@ -766,17 +787,19 @@ const memOpts=(withC)=>[['z',avatar('z')+' '+esc(nm('z'))],['e',avatar('e')+' '+
 function amountInput(v){return `<div class="f"><label>Montant (Ar)</label><input class="amount" name="amount" inputmode="numeric" required placeholder="0" value="${v?num(v):''}" autocomplete="off"></div>`}
 function bindAmount(root){root.querySelectorAll('input[name=amount],input[name=target],input[name=initial]').forEach(i=>i.addEventListener('input',()=>{const p=i.selectionStart,l=i.value.length;const n=parseAmt(i.value);i.value=n?num(n):'';const d=i.value.length-l;try{i.setSelectionRange(p+d,p+d)}catch(e){}}))}
 
+function newCatInline(kd){return `<button type="button" class="linkbtn sm" data-act="formnewcat">＋ Nouvelle catégorie</button><div class="newcat" data-kind="${kd}"><input class="inp ncemo" maxlength="4" placeholder="🏷️"><input class="inp ncname" placeholder="Nom de la catégorie"><button type="button" class="btn sm" data-act="formaddcat" data-kind="${kd}">OK</button></div>`}
 function openForm(col,x={},preset={}){
+  refreshCats();
   const isNew=!x.id;x={...x};
   let body='',title='';
   const date=`<div class="f"><label>Date</label><input type="date" name="date" required value="${x.date||today()}"></div>`;
   const note=(ph)=>`<div class="f"><label>Description (facultatif)</label><input name="note" placeholder="${ph}" value="${esc(x.note||'')}"></div>`;
   if(col==='incomes'){title=isNew?'Nouveau revenu':'Modifier le revenu';
     body=`<div class="f"><label>Qui ?</label>${segHTML('member',memOpts(false),x.member||ui.me)}</div>${amountInput(x.amount)}
-    <div class="f"><label>Source</label><select name="type">${Object.entries(INC_TYPES).map(([k,v])=>`<option value="${k}" ${x.type===k?'selected':''}>${v[1]} ${v[0]}</option>`).join('')}</select></div><div class="frow">${date}${note('Ex : salaire novembre')}</div>`}
+    <div class="f"><label>Source</label><select name="type">${Object.entries(INC_TYPES).map(([k,v])=>`<option value="${k}" ${x.type===k?'selected':''}>${v[1]} ${v[0]}</option>`).join('')}</select>${newCatInline('inc')}</div><div class="frow">${date}${note('Ex : salaire novembre')}</div>`}
   if(col==='expenses'){title=isNew?'Nouvelle dépense':'Modifier la dépense';
     body=`<div class="f"><label>Qui a payé ?</label>${segHTML('member',memOpts(true),x.member||ui.me)}</div>${amountInput(x.amount)}
-    <div class="f"><label>Catégorie</label><select name="cat">${Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${(x.cat||'alimentation')===k?'selected':''}>${v[1]} ${v[0]}</option>`).join('')}</select></div><div class="frow">${date}${note('Ex : marché du samedi')}</div>`}
+    <div class="f"><label>Catégorie</label><select name="cat">${Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${(x.cat||'alimentation')===k?'selected':''}>${v[1]} ${v[0]}</option>`).join('')}</select>${newCatInline('exp')}</div><div class="frow">${date}${note('Ex : marché du samedi')}</div>`}
   if(col==='savings'){title=isNew?'Mouvement d’épargne':'Modifier le mouvement';const gs=sortedGoals();
     body=`<div class="f"><label>Type</label>${segHTML('kind',[['depot','🐷 Versement'],['retrait','↩️ Retrait']],x.kind||preset.kind||'depot')}</div>
     <div class="f"><label>Qui ?</label>${segHTML('member',memOpts(true),x.member||ui.me)}</div>${amountInput(x.amount)}
@@ -924,6 +947,14 @@ document.addEventListener('click',async e=>{
   if(a==='importlocal')importLocal();
   if(a==='demo')demo();
   if(a==='settarget'){location.hash='epargne'}
+  if(a==='formnewcat'){const r=t.parentElement.querySelector('.newcat');r.classList.toggle('show');r.querySelector('.ncname')?.focus()}
+  if(a==='addcat'||a==='formaddcat'){const row=t.closest('.newcat');const name=row.querySelector('.ncname').value.trim();if(!name){toast('Écrivez le nom de la catégorie');row.querySelector('.ncname').focus();return}
+    const emo=row.querySelector('.ncemo').value.trim()||'🏷️';const kd=t.dataset.kind;const key='c_'+uid();
+    const cc=JSON.parse(JSON.stringify(cfg().customCats||{}));cc[kd]={...(cc[kd]||{}),[key]:[name,emo]};saveCfg({customCats:cc});refreshCats();
+    if(a==='formaddcat'){const sel=row.closest('.f').querySelector('select');const o=document.createElement('option');o.value=key;o.textContent=emo+' '+name;sel.insertBefore(o,sel.querySelector('option[value=autre]'));sel.value=key;row.classList.remove('show');row.querySelectorAll('input').forEach(i=>i.value='')}
+    toast('Catégorie « '+name+' » ajoutée ✓')}
+  if(a==='delcat'){const kd=t.dataset.kind,k=t.dataset.k;const lab=(cfg().customCats?.[kd]?.[k]||[''])[0];const used=list(kd==='exp'?'expenses':'incomes').filter(x=>(kd==='exp'?x.cat:x.type)===k).length;
+    if(await confirmBox(`Supprimer la catégorie « ${esc(lab)} » ?${used?` ${used} opération(s) l’utilisent : elles seront affichées dans « Autre ».`:''}`)){const cc=JSON.parse(JSON.stringify(cfg().customCats||{}));delete cc[kd][k];saveCfg({customCats:cc});toast('Catégorie supprimée')}}
   if(a==='logout')logout();
   if(a==='reset')resetPass(document.querySelector('#loginForm [name=email]')?.value);
   if(a==='chpass')resetPass(currentUser?.email);
@@ -931,6 +962,7 @@ document.addEventListener('click',async e=>{
   if(a==='xlsx')exportXlsx();if(a==='pdf')exportPdf();if(a==='backup')backup();if(a==='wipe')wipe();
 });
 document.addEventListener('submit',e=>{if(e.target.id!=='loginForm')return;e.preventDefault();const f=new FormData(e.target);LS.set('ze-last-email',f.get('email'));login(f.get('email'),f.get('pass'))});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList?.contains('ncname')){e.preventDefault();e.target.closest('.newcat').querySelector('button').click()}});
 $('#fab').addEventListener('click',()=>{ui.quick=!ui.quick;render()});
 document.addEventListener('change',async e=>{const t=e.target,a=t.dataset?.act;if(!a)return;
   if(a==='fcat'){ui.filter.cat=t.value;render()}
@@ -961,7 +993,7 @@ addEventListener('scroll',()=>tip.hidden=true,{passive:true});
 let installEvt=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;render()});
 addEventListener('online',render);addEventListener('offline',render);
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
-applyTheme();route();initCloud();
+refreshCats();applyTheme();route();initCloud();
 </script>
 </body>
 </html>
