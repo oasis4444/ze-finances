@@ -23,13 +23,14 @@ Application de gestion financière familiale : revenus, dépenses, épargne, pro
 
 1. **Firebase** : créer un projet sur https://console.firebase.google.com
    - Authentication → E-mail/Mot de passe → Activer
-   - Authentication → Utilisateurs → **Ajouter un utilisateur** : créer vos deux comptes (e-mail + mot de passe)
    - Authentication → Paramètres → Domaines autorisés → ajouter `VOTRE-NOM.github.io`
    - Firestore Database → Créer (mode production)
    - Firestore → Règles : coller `firestore.rules` (avec vos deux e-mails) → Publier
 2. **Configuration** : copier la configuration Web de Firebase dans `firebase-config.js`, et vos deux e-mails dans `ZE_MEMBERS`.
 3. **GitHub Pages** : Settings → Pages → Source : *Deploy from a branch* → `main` / `(root)`.
-4. Ouvrir `https://VOTRE-NOM.github.io/ze-finances/`, se connecter, puis « Ajouter à l'écran d'accueil ».
+4. Ouvrir `https://VOTRE-NOM.github.io/ze-finances/` → « Créer mon compte » (chaque membre choisit son mot de passe et confirme son e-mail), puis « Ajouter à l'écran d'accueil ».
+
+**Installation actuelle :** projet Firebase `ze-finances` (Firestore eur3), site https://oasis4444.github.io/ze-finances/
 
 Sans configuration Firebase, l'application fonctionne en mode local (données sur l'appareil uniquement).
 

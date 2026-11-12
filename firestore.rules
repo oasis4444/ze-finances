@@ -1,14 +1,14 @@
 rules_version = '2';
-// Règles de sécurité Z&E : seuls les deux comptes listés peuvent lire et écrire.
-// Remplacez les deux adresses e-mail, puis copiez ce texte dans
-// Console Firebase → Firestore Database → Règles → Publier.
+// Règles de sécurité Z&E : seuls les deux comptes listés, avec e-mail vérifié,
+// peuvent lire et écrire les données du foyer.
 service cloud.firestore {
   match /databases/{database}/documents {
     function isMember() {
       return request.auth != null
+        && request.auth.token.email_verified == true
         && request.auth.token.email.lower() in [
-          'EMAIL_MARI@gmail.com'.lower(),
-          'EMAIL_EPOUSE@gmail.com'.lower()
+          'manirisoazakatina@gmail.com',
+          'manirisoazakatiana@gmail.com'
         ];
     }
     match /households/ze/{document=**} {

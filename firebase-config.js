@@ -1,18 +1,18 @@
 // Configuration Firebase de Z&E.
 // Collez ici la configuration donnée par la console Firebase
 // (Paramètres du projet → Vos applications → Web).
-// Tant que apiKey vaut "A_REMPLIR", l'application fonctionne en mode local (sur l'appareil uniquement).
+// Cette clé n'est pas secrète : la sécurité est assurée par firestore.rules.
 window.ZE_FIREBASE = {
-  apiKey: "A_REMPLIR",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyCcOX361VfMjXobyHu5-Fpex-MYWnLy2aU",
+  authDomain: "ze-finances.firebaseapp.com",
+  projectId: "ze-finances",
+  storageBucket: "ze-finances.firebasestorage.app",
+  messagingSenderId: "401647316322",
+  appId: "1:401647316322:web:50c95a966ae3229a31903b"
 };
 
 // Adresse e-mail de chaque membre → profil dans l'application ("z" ou "e").
 window.ZE_MEMBERS = {
-  // "email.du.mari@gmail.com": "z",
-  // "email.de.lepouse@gmail.com": "e"
+  "manirisoazakatina@gmail.com": "z",
+  "manirisoazakatiana@gmail.com": "e"
 };

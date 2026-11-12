@@ -413,7 +413,7 @@ async function initCloud(){
     let d;try{d=fs.initializeFirestore(app,{localCache:fs.persistentLocalCache({tabManager:fs.persistentMultipleTabManager()})})}catch(e){d=fs.getFirestore(app)}
     const auth=authM.getAuth(app);
     fb={db:d,auth,fs,authM};
-    authM.onAuthStateChanged(auth,u=>{currentUser=u;if(u)startSync();else{stopSync();authState='out'}render()});
+    authM.onAuthStateChanged(auth,u=>{currentUser=u;if(u&&!u.emailVerified){stopSync();authState='verify'}else if(u)startSync();else{stopSync();authState='out'}render()});
   }catch(e){console.warn(e);authState='error';render()}
 }
 function stopSync(){unsubs.forEach(f=>{try{f()}catch(e){}});unsubs=[];cloudLoaded=new Set()}
@@ -432,6 +432,20 @@ async function login(email,pass){
   loginMsg='';try{await fb.authM.signInWithEmailAndPassword(fb.auth,email.trim(),pass)}
   catch(e){loginMsg=({'auth/invalid-credential':'E-mail ou mot de passe incorrect.','auth/wrong-password':'E-mail ou mot de passe incorrect.','auth/user-not-found':'Aucun compte avec cet e-mail.','auth/too-many-requests':'Trop de tentatives. Réessayez dans quelques minutes.','auth/network-request-failed':'Pas de connexion internet.','auth/invalid-email':'Adresse e-mail invalide.'})[e.code]||('Connexion impossible ('+e.code+')');render()}
 }
+const allowed=e=>{const m=window.ZE_MEMBERS||{};return !Object.keys(m).length||Object.keys(m).map(x=>x.toLowerCase()).includes((e||'').trim().toLowerCase())};
+let loginMode='in';
+async function signup(email,pass,pass2){
+  loginMsg='';email=email.trim();
+  if(!allowed(email)){loginMsg="Cette adresse e-mail n'est pas autorisée pour Z&E.";render();return}
+  if(pass.length<8){loginMsg='Le mot de passe doit contenir au moins 8 caractères.';render();return}
+  if(pass!==pass2){loginMsg='Les deux mots de passe ne correspondent pas.';render();return}
+  try{const cr=await fb.authM.createUserWithEmailAndPassword(fb.auth,email,pass);await fb.authM.sendEmailVerification(cr.user);authState='verify';render()}
+  catch(e){loginMsg=({'auth/email-already-in-use':'Un compte existe déjà avec cet e-mail : utilisez « Se connecter ».','auth/weak-password':'Mot de passe trop faible.','auth/invalid-email':'Adresse e-mail invalide.','auth/network-request-failed':'Pas de connexion internet.','auth/operation-not-allowed':"La création de compte est désactivée."})[e.code]||('Création impossible ('+e.code+')');render()}
+}
+async function checkVerified(){
+  try{await fb.authM.reload(fb.auth.currentUser);const u=fb.auth.currentUser;if(u?.emailVerified){await u.getIdToken(true);currentUser=u;startSync();render();toast('E-mail vérifié ✓ Bienvenue !')}else{loginMsg="L'e-mail n'est pas encore vérifié. Ouvrez le lien reçu (regardez aussi dans les spams).";render()}}catch(e){toast('Erreur : '+e.code)}
+}
+async function resendVerif(){try{await fb.authM.sendEmailVerification(fb.auth.currentUser);toast('E-mail renvoyé ✓')}catch(e){toast(e.code==='auth/too-many-requests'?'Patientez quelques minutes avant de renvoyer.':'Envoi impossible')}}
 async function resetPass(email){
   if(!email){loginMsg='Écrivez d’abord votre e-mail ci-dessus.';render();return}
   try{await fb.authM.sendPasswordResetEmail(fb.auth,email.trim());toast('E-mail de réinitialisation envoyé ✓')}catch(e){toast('Envoi impossible : '+e.code)}
@@ -448,14 +462,20 @@ async function importLocal(){
 function loginHTML(){
   if(authState==='pending')return `<div class="login"><div class="card lcard"><div class="logo big">${logoHTML()}</div><p class="muted">Connexion…</p></div></div>`;
   if(authState==='error')return `<div class="login"><div class="card lcard"><div class="logo big">Z&amp;E</div><h2 class="serif">Z&amp;E</h2><p class="muted">Impossible de joindre le serveur. Vérifiez votre connexion internet puis rechargez la page.</p><button class="btn" onclick="location.reload()">Recharger</button></div></div>`;
+  if(authState==='verify')return `<div class="login"><div class="card lcard"><div class="logo big">${logoHTML()}</div><h2 class="serif" style="font-size:26px">Vérifiez votre e-mail</h2>
+    <p class="muted">Un lien de confirmation a été envoyé à <b>${esc(currentUser?.email||'')}</b>. Ouvrez-le (regardez aussi dans les spams), puis revenez ici.</p>
+    ${loginMsg?`<div class="alert warn">${ic('alert')}<span class="tx">${esc(loginMsg)}</span></div>`:''}
+    <button class="btn" data-act="verified" style="width:100%;justify-content:center;padding:13px">J'ai confirmé mon e-mail</button>
+    <button type="button" class="linkbtn" data-act="resend">Renvoyer l'e-mail</button><br><button type="button" class="linkbtn" data-act="logout">Changer de compte</button></div></div>`;
   if(authState==='denied')return `<div class="login"><div class="card lcard"><div class="logo big">Z&amp;E</div><h2 class="serif">Accès refusé</h2><p class="muted">Le compte <b>${esc(currentUser?.email)}</b> n’est pas autorisé à voir ces données.</p><button class="btn" data-act="logout">Changer de compte</button></div></div>`;
   return `<div class="login"><form class="card lcard" id="loginForm">
     <div class="logo big">${logoHTML()}</div><h2 class="serif">Z&amp;E</h2><p class="muted serif" style="font-style:italic;margin-top:0">Notre avenir, notre projet</p>
     <div class="f"><label>E-mail</label><input type="email" name="email" autocomplete="username" required value="${esc(LS.get('ze-last-email',''))}"></div>
-    <div class="f"><label>Mot de passe</label><input type="password" name="pass" autocomplete="current-password" required></div>
+    <div class="f"><label>Mot de passe${loginMode==='up'?' (8 caractères minimum)':''}</label><input type="password" name="pass" autocomplete="${loginMode==='up'?'new-password':'current-password'}" required></div>
+    ${loginMode==='up'?`<div class="f"><label>Confirmer le mot de passe</label><input type="password" name="pass2" autocomplete="new-password" required></div>`:''}
     ${loginMsg?`<div class="alert bad">${ic('alert')}<span class="tx">${esc(loginMsg)}</span></div>`:''}
-    <button class="btn" type="submit" style="width:100%;justify-content:center;padding:13px">Se connecter</button>
-    <button type="button" class="linkbtn" data-act="reset">Mot de passe oublié ?</button>
+    <button class="btn" type="submit" style="width:100%;justify-content:center;padding:13px">${loginMode==='up'?'Créer mon compte':'Se connecter'}</button>
+    ${loginMode==='up'?`<button type="button" class="linkbtn" data-act="lmode" data-m="in">J'ai déjà un compte · Se connecter</button>`:`<button type="button" class="linkbtn" data-act="reset">Mot de passe oublié ?</button><br><button type="button" class="linkbtn" data-act="lmode" data-m="up">Première visite ? Créer mon compte</button>`}
     <p class="small muted" style="margin-top:18px">« Ensemble, nous gérons aujourd'hui pour construire demain. »</p></form></div>`;
 }
 
@@ -756,7 +776,7 @@ function vReglages(){
 function draw(){
   refreshCats();
   const locked=mode==='cloud'&&authState!=='in';document.body.classList.toggle('locked',locked);
-  if(locked){const k=authState+'|'+loginMsg+'|'+(S.photos?.couple||'').length;if(draw.k!==k||!$('#main .login')){draw.k=k;$('#main').innerHTML=loginHTML()}return}
+  if(locked){const k=authState+'|'+loginMsg+'|'+loginMode+'|'+(S.photos?.couple||'').length;if(draw.k!==k||!$('#main .login')){draw.k=k;$('#main').innerHTML=loginHTML()}return}
   draw.k=null;
   const v=VIEWS.find(x=>x[0]===ui.view)?ui.view:'accueil';
   $('#nav').innerHTML=VIEWS.map(([k,l,i])=>`<a href="#${k}" class="${k===v?'on':''}">${ic(i)}${l}</a>`).join('');
@@ -955,13 +975,16 @@ document.addEventListener('click',async e=>{
     toast('Catégorie « '+name+' » ajoutée ✓')}
   if(a==='delcat'){const kd=t.dataset.kind,k=t.dataset.k;const lab=(cfg().customCats?.[kd]?.[k]||[''])[0];const used=list(kd==='exp'?'expenses':'incomes').filter(x=>(kd==='exp'?x.cat:x.type)===k).length;
     if(await confirmBox(`Supprimer la catégorie « ${esc(lab)} » ?${used?` ${used} opération(s) l’utilisent : elles seront affichées dans « Autre ».`:''}`)){const cc=JSON.parse(JSON.stringify(cfg().customCats||{}));delete cc[kd][k];saveCfg({customCats:cc});toast('Catégorie supprimée')}}
-  if(a==='logout')logout();
+  if(a==='logout'){loginMsg='';logout()}
+  if(a==='lmode'){loginMode=t.dataset.m;loginMsg='';render()}
+  if(a==='verified')checkVerified();
+  if(a==='resend')resendVerif();
   if(a==='reset')resetPass(document.querySelector('#loginForm [name=email]')?.value);
   if(a==='chpass')resetPass(currentUser?.email);
   if(a==='install'&&installEvt){installEvt.prompt();installEvt=null;render()}
   if(a==='xlsx')exportXlsx();if(a==='pdf')exportPdf();if(a==='backup')backup();if(a==='wipe')wipe();
 });
-document.addEventListener('submit',e=>{if(e.target.id!=='loginForm')return;e.preventDefault();const f=new FormData(e.target);LS.set('ze-last-email',f.get('email'));login(f.get('email'),f.get('pass'))});
+document.addEventListener('submit',e=>{if(e.target.id!=='loginForm')return;e.preventDefault();const f=new FormData(e.target);LS.set('ze-last-email',f.get('email'));if(loginMode==='up')signup(f.get('email'),f.get('pass'),f.get('pass2'));else login(f.get('email'),f.get('pass'))});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList?.contains('ncname')){e.preventDefault();e.target.closest('.newcat').querySelector('button').click()}});
 $('#fab').addEventListener('click',()=>{ui.quick=!ui.quick;render()});
 document.addEventListener('change',async e=>{const t=e.target,a=t.dataset?.act;if(!a)return;
