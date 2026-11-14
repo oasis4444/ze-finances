@@ -1,6 +1,6 @@
 # Z&E — Notre avenir, notre projet
 
-Application de gestion financière familiale : revenus, dépenses, épargne, projets (terrain, maison…), budget intelligent, alertes et simulations. Devise : Ariary (Ar).
+Application de gestion financière familiale (français, malagasy, English) : revenus, dépenses, épargne, projets (terrain, maison…), budget intelligent, alertes et simulations. Devise : Ariary (Ar).
 
 > « Ensemble, nous gérons aujourd'hui pour construire demain. »
 

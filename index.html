@@ -220,6 +220,7 @@ main{padding:22px 32px 110px;max-width:1240px;width:100%;margin:0 auto}
 .linkbtn.sm{font-size:13px;margin-top:6px;padding:0;text-align:left}
 .catx{border:0;background:none;color:inherit;font-size:16px;line-height:1;cursor:pointer;padding:0 0 0 4px;opacity:.7}
 .catx:hover{opacity:1}
+.langsel{width:auto;padding:7px 10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer}
 /* Install */
 .inst h4{font-size:14px;margin:14px 0 6px}
 .inst ol{margin:0;padding-left:20px;line-height:1.7;font-size:14px}
@@ -302,6 +303,7 @@ body.locked .app{grid-template-columns:1fr}
 <div id="toast"></div>
 <div id="modalRoot"></div>
 
+<script src="i18n.js"></script>
 <script src="firebase-config.js"></script>
 <script type="module">
 /* ============ Utilitaires ============ */
@@ -317,9 +319,10 @@ const pad=n=>String(n).padStart(2,'0');
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
 const ym=d=>(d||'').slice(0,7);
 const addM=(m,k)=>{let [y,mo]=m.split('-').map(Number);mo+=k;while(mo>12){mo-=12;y++}while(mo<1){mo+=12;y--}return y+'-'+pad(mo)};
-const mName=(m,opt={month:'long',year:'numeric'})=>{const [y,mo]=m.split('-').map(Number);return new Date(y,mo-1,1).toLocaleDateString('fr-FR',opt)};
+const mName=(m,opt={month:'long',year:'numeric'})=>{const [y,mo]=m.split('-').map(Number);return window.ZEI18N?ZEI18N.monthName(y,mo,opt):new Date(y,mo-1,1).toLocaleDateString('fr-FR',opt)};
+const T=s=>window.ZEI18N?ZEI18N.tr(s):s;
 const mShort=m=>mName(m,{month:'short'}).replace('.','');
-const dLabel=d=>{if(!d)return'';const [y,m,dd]=d.split('-').map(Number);return new Date(y,m-1,dd).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})};
+const dLabel=d=>{if(!d)return'';const [y,m,dd]=d.split('-').map(Number);return window.ZEI18N?ZEI18N.dayLabel(y,m,dd):new Date(y,m-1,dd).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})};
 const monthsBetween=(a,b)=>{const [y1,m1]=a.split('-').map(Number),[y2,m2]=b.split('-').map(Number);return (y2-y1)*12+(m2-m1)};
 const parseAmt=v=>Math.max(0,Math.round(+String(v).replace(/[^\d.,]/g,'').replace(',','.')||0));
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -476,7 +479,7 @@ function loginHTML(){
     <button class="btn" data-act="verified" style="width:100%;justify-content:center;padding:13px">J'ai confirmé mon e-mail</button>
     <button type="button" class="linkbtn" data-act="resend">Renvoyer l'e-mail</button><br><button type="button" class="linkbtn" data-act="logout">Changer de compte</button></div></div>`;
   if(authState==='denied')return `<div class="login"><div class="card lcard"><div class="logo big">Z&amp;E</div><h2 class="serif">Accès refusé</h2><p class="muted">Le compte <b>${esc(currentUser?.email)}</b> n’est pas autorisé à voir ces données.</p><button class="btn" data-act="logout">Changer de compte</button></div></div>`;
-  return `<div class="login"><form class="card lcard" id="loginForm">
+  return `<div class="login"><form class="card lcard" id="loginForm"><div style="display:flex;justify-content:flex-end;margin:-14px -10px 6px 0">${langPick(false)}</div>
     <div class="logo big">${logoHTML()}</div><h2 class="serif">Z&amp;E</h2><p class="muted serif" style="font-style:italic;margin-top:0">Notre avenir, notre projet</p>
     <div class="f"><label>E-mail</label><input type="email" name="email" autocomplete="username" required value="${esc(LS.get('ze-last-email',''))}"></div>
     <div class="f"><label>Mot de passe${loginMode==='up'?' (8 caractères minimum)':''}</label><input type="password" name="pass" autocomplete="${loginMode==='up'?'new-password':'current-password'}" required></div>
@@ -541,9 +544,11 @@ function meSwitch(){return `<div class="pill" title="Qui utilise l'application ?
 function topbar(title,sub,extra=''){
   return `<div class="top"><div><h1>${title}</h1>${sub?`<div class="sub">${sub}</div>`:''}</div><div class="grow"></div>${extra}${monthNav()}${meSwitch()}
   <button class="iconbtn" data-act="mode" title="Clair / sombre">${ic(document.documentElement.dataset.mode==='dark'?'sun':'moon')}</button>
+  ${langPick()}
   ${isStandalone()?'':`<button class="btn sm" data-act="install" title="Installer l'application">${ic('dl')}<span class="hide-m">Installer</span></button>`}
   <button class="iconbtn" data-act="go" data-v="reglages" title="Couleurs & paramètres">${ic('palette')}</button></div>`;
 }
+function langPick(short=true){const L=window.ZEI18N;if(!L)return'';return `<select class="inp nt langsel" data-act="lang" title="${T('Langue')}">${Object.entries(L.LANGS).map(([k,v])=>`<option value="${k}" ${L.lang===k?'selected':''}>${{fr:'🇫🇷',mg:'🇲🇬',en:'🇬🇧'}[k]} ${short?k.toUpperCase():v}</option>`).join('')}</select>`}
 function syncBadge(){if(mode==='cloud'&&!navigator.onLine)return `<span class="sync"><span class="dot" style="background:var(--warn)"></span>Hors ligne — synchronisation au retour du réseau</span>`;return mode==='cloud'?`<span class="sync cloud"><span class="dot"></span>Synchronisé en ligne</span>`:`<span class="sync"><span class="dot"></span>Enregistré sur cet appareil</span>`}
 function goalCard(g){
   const i=goalInfo(g);const k=GOAL_KINDS[g.kind]||GOAL_KINDS.autre;
@@ -757,7 +762,8 @@ function vReglages(){
     <div class="swatches" style="margin-bottom:30px">${PRESETS.map(([n,a,b])=>`<button class="sw ${theme.acc===a&&theme.acc2===b?'on':''}" style="background:linear-gradient(135deg,${a},${b})" data-act="preset" data-a="${a}" data-b="${b}" title="${n}"><span>${n}</span></button>`).join('')}</div>
     <div class="chips" style="gap:18px;margin-bottom:18px"><label class="colorin"><input type="color" value="${theme.acc}" data-act="c1"> Couleur principale</label><label class="colorin"><input type="color" value="${theme.acc2}" data-act="c2"> Couleur secondaire</label></div>
     <div class="f"><label>Mode d'affichage</label><div class="seg">${[['light','☀️ Clair'],['dark','🌙 Sombre'],['auto','🖥️ Automatique']].map(([k,l])=>`<button class="${theme.mode===k?'on':''}" data-act="setmode" data-m="${k}">${l}</button>`).join('')}</div></div>
-    <p class="small muted">Chaque appareil garde ses propres couleurs.</p></div>
+    <p class="small muted">Chaque appareil garde ses propres couleurs.</p>
+    <div class="f" style="margin-top:14px"><label>Langue</label><div class="seg nt">${Object.entries(window.ZEI18N?.LANGS||{}).map(([k,v])=>`<button class="${window.ZEI18N?.lang===k?'on':''}" data-act="setlang" data-m="${k}">${{fr:'🇫🇷',mg:'🇲🇬',en:'🇬🇧'}[k]} ${v}</button>`).join('')}</div></div></div>
    <div class="card"><div class="hd"><h3>${ic('heart','width=18 height=18')} Identité & profils</h3></div>
     <div class="prof"><div class="logo" style="width:64px;height:64px">${logoHTML()}</div><div class="grow"><b>Logo : photo du couple</b><div class="small muted">Affichée sur le tableau de bord</div></div><label class="btn sm ghost filebtn">Choisir<input type="file" accept="image/*" data-act="photo" data-k="couple"></label></div>
     ${['z','e'].map(k=>`<div class="prof">${avatar(k,'lg')}<div class="grow"><div class="frow"><input class="inp" value="${esc(c.names?.[k]||'')}" placeholder="Prénom" data-act="name" data-k="${k}"><input class="inp" value="${esc(c.roles?.[k]||'')}" placeholder="Rôle" data-act="role" data-k="${k}"></div></div><label class="btn sm ghost filebtn">Photo<input type="file" accept="image/*" data-act="photo" data-k="${k}"></label></div>`).join('')}
@@ -916,7 +922,7 @@ async function exportXlsx(){
   toast('Préparation du fichier Excel…');
   try{await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js')}catch(e){toast('Impossible de charger le module Excel');return}
   const X=window.XLSX,wb=X.utils.book_new();const srt=a=>a.sort((x,y)=>(x.date||'').localeCompare(y.date||''));
-  const add=(name,rows)=>{const ws=X.utils.json_to_sheet(rows.length?rows:[{'':'Aucune donnée'}]);ws['!cols']=Object.keys(rows[0]||{a:1}).map(()=>({wch:22}));X.utils.book_append_sheet(wb,ws,name)};
+  const add=(name,rows)=>{name=T(name).slice(0,31);rows=rows.map(r=>Object.fromEntries(Object.entries(r).map(([k,v])=>[T(k),typeof v==='string'?T(v):v])));const ws=X.utils.json_to_sheet(rows.length?rows:[{'':'Aucune donnée'}]);ws['!cols']=Object.keys(rows[0]||{a:1}).map(()=>({wch:22}));X.utils.book_append_sheet(wb,ws,name)};
   const months=[...new Set([...list('incomes'),...list('expenses'),...list('savings')].map(x=>ym(x.date)))].sort();
   add('Résumé mensuel',months.map(m=>{const s=monthStats(m);return{'Mois':m,'Revenus (Ar)':s.inc,'Dépenses (Ar)':s.exp,'Épargne (Ar)':s.sav,'Solde (Ar)':s.bal}}));
   add('Revenus',srt(list('incomes')).map(x=>({'Date':x.date,'Membre':memName(x.member),'Source':INC_TYPES[x.type]?.[0]||x.type,'Description':x.note||'','Montant (Ar)':+x.amount})));
@@ -929,12 +935,12 @@ async function exportXlsx(){
 async function exportPdf(){
   toast('Préparation du rapport PDF…');
   try{await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js')}catch(e){toast('Impossible de charger le module PDF');return}
-  const {jsPDF}=window.jspdf;const d=new jsPDF({unit:'pt',format:'a4'});const m=ui.month,st=monthStats(m);
+  const {jsPDF}=window.jspdf;const d=new jsPDF({unit:'pt',format:'a4'});const _t=d.text.bind(d),_at=d.autoTable.bind(d);d.text=(x,...r)=>_t(typeof x==='string'?T(x):x,...r);d.autoTable=o=>_at({...o,head:o.head.map(r=>r.map(T)),body:o.body.map(r=>r.map(c=>typeof c==='string'?T(c):c))});const m=ui.month,st=monthStats(m);
   const hex=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16));const A=hex(theme.acc);
   d.setFillColor(...A);d.rect(0,0,595,90,'F');d.setTextColor(255);d.setFont('helvetica','bold');d.setFontSize(26);d.text('Z&E',40,48);
-  d.setFontSize(11);d.setFont('helvetica','normal');d.text((cfg().tagline||'')+'  -  Rapport de '+mName(m),40,70);
+  d.setFontSize(11);d.setFont('helvetica','normal');d.text(T(cfg().tagline||'')+'  -  '+T('Rapport de')+' '+mName(m),40,70);
   d.setTextColor(30);let y=120;
-  d.autoTable({startY:y,head:[['Indicateur','Montant']],body:[['Revenus du couple',fmt(st.inc)],['  dont '+nm('z'),fmt(sum(inM(list('incomes'),m).filter(x=>x.member==='z')))],['  dont '+nm('e'),fmt(sum(inM(list('incomes'),m).filter(x=>x.member==='e')))],['Dépenses',fmt(st.exp)],['Épargne',fmt(st.sav)],['Solde disponible',fmt(st.bal)]],headStyles:{fillColor:A},columnStyles:{1:{halign:'right'}},margin:{left:40,right:40}});
+  d.autoTable({startY:y,head:[['Indicateur','Montant']],body:[['Revenus du couple',fmt(st.inc)],[T('dont')+' '+nm('z'),fmt(sum(inM(list('incomes'),m).filter(x=>x.member==='z')))],[T('dont')+' '+nm('e'),fmt(sum(inM(list('incomes'),m).filter(x=>x.member==='e')))],['Dépenses',fmt(st.exp)],['Épargne',fmt(st.sav)],['Solde disponible',fmt(st.bal)]],headStyles:{fillColor:A},columnStyles:{1:{halign:'right'}},margin:{left:40,right:40}});
   y=d.lastAutoTable.finalY+24;d.setFont('helvetica','bold');d.setFontSize(14);d.text('Nos projets',40,y);
   d.autoTable({startY:y+8,head:[['Projet','Objectif','Économisé','Progression','Estimation']],body:sortedGoals().map(g=>{const i=goalInfo(g);return[g.name,fmt(i.target),fmt(i.saved),Math.floor(i.pct)+' %',i.rem<=0?'Atteint':i.months!=null?i.months+' mois':'-']}),headStyles:{fillColor:A},margin:{left:40,right:40}});
   y=d.lastAutoTable.finalY+24;d.text('Dépenses par catégorie',40,y);const t=catTotals(m),b=cfg().budgets||{};
@@ -942,7 +948,7 @@ async function exportPdf(){
   y=d.lastAutoTable.finalY+24;d.text('Opérations du mois',40,y);
   const ops=[...inM(list('incomes'),m).map(x=>[x.date,'Revenu',memName(x.member),x.note||INC_TYPES[x.type]?.[0],'+'+fmt(x.amount)]),...inM(list('expenses'),m).map(x=>[x.date,'Dépense',memName(x.member),x.note||CATS[x.cat]?.[0],'-'+fmt(x.amount)]),...inM(list('savings'),m).map(x=>[x.date,x.kind==='retrait'?'Retrait':'Épargne',memName(x.member),x.note||S.goals[x.goalId]?.name||'',(x.kind==='retrait'?'-':'+')+fmt(x.amount)])].sort((a,c)=>a[0].localeCompare(c[0]));
   d.autoTable({startY:y+8,head:[['Date','Type','Membre','Description','Montant']],body:ops,headStyles:{fillColor:A},columnStyles:{4:{halign:'right'}},margin:{left:40,right:40},styles:{fontSize:9}});
-  d.setFontSize(9);d.setTextColor(140);d.text('« Ensemble, nous gérons aujourd\'hui pour construire demain. »  -  généré le '+dLabel(today()),40,820);
+  d.setFontSize(9);d.setTextColor(140);d.text(T('« Ensemble, nous gérons aujourd\'hui pour construire demain. »')+'  -  '+dLabel(today()),40,820);
   saveFile(`ZE-rapport-${m}.pdf`,d.output('blob'));
 }
 function backup(){saveFile(`ZE-sauvegarde-${today()}.json`,JSON.stringify({app:'Z&E',version:1,date:today(),incomes:S.incomes,expenses:S.expenses,savings:S.savings,goals:S.goals,cfg:S.cfg,photos:S.photos},null,1))}
@@ -1006,6 +1012,7 @@ document.addEventListener('click',async e=>{
     toast('Catégorie « '+name+' » ajoutée ✓')}
   if(a==='delcat'){const kd=t.dataset.kind,k=t.dataset.k;const lab=(cfg().customCats?.[kd]?.[k]||[''])[0];const used=list(kd==='exp'?'expenses':'incomes').filter(x=>(kd==='exp'?x.cat:x.type)===k).length;
     if(await confirmBox(`Supprimer la catégorie « ${esc(lab)} » ?${used?` ${used} opération(s) l’utilisent : elles seront affichées dans « Autre ».`:''}`)){const cc=JSON.parse(JSON.stringify(cfg().customCats||{}));delete cc[kd][k];saveCfg({customCats:cc});toast('Catégorie supprimée')}}
+  if(a==='setlang'){ZEI18N.setLang(t.dataset.m);location.reload();return}
   if(a==='logout'){loginMsg='';logout()}
   if(a==='lmode'){loginMode=t.dataset.m;loginMsg='';render()}
   if(a==='verified')checkVerified();
@@ -1019,6 +1026,7 @@ document.addEventListener('submit',e=>{if(e.target.id!=='loginForm')return;e.pre
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList?.contains('ncname')){e.preventDefault();e.target.closest('.newcat').querySelector('button').click()}});
 $('#fab').addEventListener('click',()=>{ui.quick=!ui.quick;render()});
 document.addEventListener('change',async e=>{const t=e.target,a=t.dataset?.act;if(!a)return;
+  if(a==='lang'){ZEI18N.setLang(t.value);location.reload();return}
   if(a==='fcat'){ui.filter.cat=t.value;render()}
   if(a==='fscope'){ui.filter.scope=t.value;render()}
   if(a==='simgoal'){sim.goal=t.value;render()}
@@ -1049,7 +1057,7 @@ addEventListener('appinstalled',()=>{installEvt=null;document.querySelectorAll('
 try{const qp=new URLSearchParams(location.search).get('add');if(qp&&['expenses','incomes','savings'].includes(qp)){history.replaceState(null,'',location.pathname+location.hash);setTimeout(()=>{if(!document.body.classList.contains('locked'))openForm(qp)},1200)}}catch(e){}
 addEventListener('online',render);addEventListener('offline',render);
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
-refreshCats();applyTheme();route();initCloud();
+refreshCats();applyTheme();window.ZEI18N?.start();route();initCloud();
 </script>
 </body>
 </html>
