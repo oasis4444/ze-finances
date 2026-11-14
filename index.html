@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#e0457b">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -219,6 +220,13 @@ main{padding:22px 32px 110px;max-width:1240px;width:100%;margin:0 auto}
 .linkbtn.sm{font-size:13px;margin-top:6px;padding:0;text-align:left}
 .catx{border:0;background:none;color:inherit;font-size:16px;line-height:1;cursor:pointer;padding:0 0 0 4px;opacity:.7}
 .catx:hover{opacity:1}
+/* Install */
+.inst h4{font-size:14px;margin:14px 0 6px}
+.inst ol{margin:0;padding-left:20px;line-height:1.7;font-size:14px}
+.inst .kbd{display:inline-block;padding:1px 7px;border:1px solid var(--line);border-radius:6px;background:var(--surface2);font-weight:700;font-size:12.5px}
+.inst .plat{padding:12px 14px;border:1px solid var(--line);border-radius:14px;margin-bottom:10px}
+.inst .plat.me{border-color:var(--acc);background:var(--acc-soft)}
+@media (max-width:860px){.hide-m{display:none}}
 /* Login */
 body.locked .side,body.locked .bnav,body.locked .fab{display:none!important}
 body.locked .app{grid-template-columns:1fr}
@@ -476,6 +484,7 @@ function loginHTML(){
     ${loginMsg?`<div class="alert bad">${ic('alert')}<span class="tx">${esc(loginMsg)}</span></div>`:''}
     <button class="btn" type="submit" style="width:100%;justify-content:center;padding:13px">${loginMode==='up'?'Créer mon compte':'Se connecter'}</button>
     ${loginMode==='up'?`<button type="button" class="linkbtn" data-act="lmode" data-m="in">J'ai déjà un compte · Se connecter</button>`:`<button type="button" class="linkbtn" data-act="reset">Mot de passe oublié ?</button><br><button type="button" class="linkbtn" data-act="lmode" data-m="up">Première visite ? Créer mon compte</button>`}
+    ${isStandalone()?'':`<button type="button" class="btn ghost sm" data-act="install" style="margin-top:16px">${ic('dl')}Installer l'application sur cet appareil</button>`}
     <p class="small muted" style="margin-top:18px">« Ensemble, nous gérons aujourd'hui pour construire demain. »</p></form></div>`;
 }
 
@@ -532,6 +541,7 @@ function meSwitch(){return `<div class="pill" title="Qui utilise l'application ?
 function topbar(title,sub,extra=''){
   return `<div class="top"><div><h1>${title}</h1>${sub?`<div class="sub">${sub}</div>`:''}</div><div class="grow"></div>${extra}${monthNav()}${meSwitch()}
   <button class="iconbtn" data-act="mode" title="Clair / sombre">${ic(document.documentElement.dataset.mode==='dark'?'sun':'moon')}</button>
+  ${isStandalone()?'':`<button class="btn sm" data-act="install" title="Installer l'application">${ic('dl')}<span class="hide-m">Installer</span></button>`}
   <button class="iconbtn" data-act="go" data-v="reglages" title="Couleurs & paramètres">${ic('palette')}</button></div>`;
 }
 function syncBadge(){if(mode==='cloud'&&!navigator.onLine)return `<span class="sync"><span class="dot" style="background:var(--warn)"></span>Hors ligne — synchronisation au retour du réseau</span>`;return mode==='cloud'?`<span class="sync cloud"><span class="dot"></span>Synchronisé en ligne</span>`:`<span class="sync"><span class="dot"></span>Enregistré sur cet appareil</span>`}
@@ -765,7 +775,7 @@ function vReglages(){
    <div class="card"><div class="hd"><h3>${ic('info','width=18 height=18')} Compte & synchronisation</h3></div>
     <p>${syncBadge()}</p>
     ${mode==='cloud'&&currentUser?`<p class="small">Connecté : <b>${esc(currentUser.email)}</b></p><div class="chips" style="margin-bottom:10px"><button class="btn sm ghost" data-act="chpass">Changer le mot de passe</button><button class="btn sm ghost" data-act="logout">Se déconnecter</button></div>`:''}
-    ${installEvt?`<button class="btn sm" data-act="install" style="margin-bottom:10px">${ic('dl')}Installer l'application</button>`:`<p class="small muted">📱 Pour l'installer : menu du navigateur → « Ajouter à l'écran d'accueil » (sur iPhone : bouton Partager → « Sur l'écran d'accueil »).</p>`}
+    ${isStandalone()?`<p class="small"><span class="tag ok">✓ Application installée</span></p>`:`<button class="btn sm" data-act="install" style="margin-bottom:10px">${ic('dl')}Installer l'application / raccourci bureau</button>`}
     <p class="small muted">Je suis : ${meSwitch()}</p>
     <p class="small muted">Les nouvelles opérations sont attribuées par défaut à la personne choisie ici.</p>
     <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)"><button class="btn sm danger" data-act="wipe">${ic('trash')}Effacer toutes les données</button></div></div>
@@ -872,6 +882,27 @@ function openGoal(id){
   o.addEventListener('change',e=>{const t=e.target;if(t.dataset.s==null)return;const st=(S.goals[id].steps||[]).map(s=>({...s}));const s=st[+t.dataset.s];if(!s)return;
     s[t.dataset.f]=t.dataset.f==='name'?t.value.trim():parseAmt(t.value);if(t.dataset.f!=='name')t.value=s[t.dataset.f]?num(s[t.dataset.f]):'';put('goals',{...S.goals[id],steps:st})});
   bindAmount(o);
+}
+
+/* ============ Installation ============ */
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: minimal-ui)').matches||navigator.standalone===true;
+const platform=()=>{const u=navigator.userAgent;if(/iPhone|iPad|iPod/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1))return'ios';if(/Android/.test(u))return'android';if(/Mac/.test(u))return'mac';if(/Win/.test(u))return'win';return'other'};
+async function installApp(){
+  if(installEvt){try{installEvt.prompt();const r=await installEvt.userChoice;installEvt=null;if(r.outcome==='accepted')return}catch(e){}}
+  const pf=platform(),safari=/Safari/.test(navigator.userAgent)&&!/Chrome|CriOS|Edg/.test(navigator.userAgent);
+  const box=(k,title,body)=>`<div class="plat ${pf===k?'me':''}"><b>${title}</b>${pf===k?' <span class="tag ok">cet appareil</span>':''}<ol>${body}</ol></div>`;
+  const blocks={
+   mac:box('mac','💻 Mac (Chrome)',`<li>Dans la barre d'adresse, cliquez sur l'icône <span class="kbd">⊕ Installer</span> à droite (ou menu <span class="kbd">⋮</span> → <i>Caster, enregistrer et partager</i> → <i>Installer la page en tant qu'application</i>).</li><li>Z&amp;E s'ouvre dans sa propre fenêtre et apparaît dans le Launchpad et le Dock.</li><li>Pour le bureau : Finder → <i>Applications</i> → <i>Applications Chrome</i> → glissez <b>Z&amp;E</b> sur le bureau en maintenant <span class="kbd">⌥ Option</span> + <span class="kbd">⌘ Cmd</span>.</li>`+(safari?`<li>Avec Safari : menu <i>Fichier</i> → <i>Ajouter au Dock</i>.</li>`:'')),
+   win:box('win','🖥️ Windows (Chrome / Edge)',`<li>Cliquez sur l'icône <span class="kbd">⊕ Installer</span> dans la barre d'adresse (ou menu <span class="kbd">⋮</span> → <i>Caster, enregistrer et partager</i> → <i>Installer la page en tant qu'application</i>).</li><li>Cochez « Créer un raccourci sur le bureau » si proposé : l'icône Z&amp;E apparaît sur le bureau et dans le menu Démarrer.</li>`),
+   android:box('android','🤖 Android (Chrome)',`<li>Menu <span class="kbd">⋮</span> → <b>Installer l'application</b> (ou « Ajouter à l'écran d'accueil »).</li><li>L'icône Z&amp;E apparaît sur l'écran d'accueil.</li>`),
+   ios:box('ios','📱 iPhone / iPad (Safari)',`<li>Touchez le bouton <b>Partager</b> <span class="kbd">⬆︎</span> en bas de l'écran.</li><li>Choisissez <b>Sur l'écran d'accueil</b>, puis <b>Ajouter</b>.</li>`)};
+  const order=[pf,...['mac','win','android','ios'].filter(x=>x!==pf)].filter(x=>blocks[x]);
+  const o=modal('📲 Installer Z&amp;E',`<div class="inst">
+   <p class="muted" style="margin-top:0">Une fois installée, Z&amp;E s'ouvre comme une vraie application, avec son icône, sans chercher le lien.</p>
+   ${order.map(k=>blocks[k]).join('')}
+   <h4>Raccourci simple pour le bureau</h4>
+   <p class="small muted" style="margin:0 0 8px">Téléchargez ce fichier puis déplacez-le sur le bureau : un double-clic ouvre Z&amp;E.</p>
+   <div class="chips"><a class="btn sm ${pf==='mac'?'':'ghost'}" href="raccourcis/ZE.webloc" download="Z&E.webloc">${ic('dl')}Raccourci Mac</a><a class="btn sm ${pf==='win'?'':'ghost'}" href="raccourcis/ZE.url" download="Z&E.url">${ic('dl')}Raccourci Windows</a></div></div>`);
 }
 
 /* ============ Fichiers ============ */
@@ -981,7 +1012,7 @@ document.addEventListener('click',async e=>{
   if(a==='resend')resendVerif();
   if(a==='reset')resetPass(document.querySelector('#loginForm [name=email]')?.value);
   if(a==='chpass')resetPass(currentUser?.email);
-  if(a==='install'&&installEvt){installEvt.prompt();installEvt=null;render()}
+  if(a==='install')installApp();
   if(a==='xlsx')exportXlsx();if(a==='pdf')exportPdf();if(a==='backup')backup();if(a==='wipe')wipe();
 });
 document.addEventListener('submit',e=>{if(e.target.id!=='loginForm')return;e.preventDefault();const f=new FormData(e.target);LS.set('ze-last-email',f.get('email'));if(loginMode==='up')signup(f.get('email'),f.get('pass'),f.get('pass2'));else login(f.get('email'),f.get('pass'))});
@@ -1014,6 +1045,8 @@ addEventListener('scroll',()=>tip.hidden=true,{passive:true});
 
 /* ============ Démarrage ============ */
 let installEvt=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;render()});
+addEventListener('appinstalled',()=>{installEvt=null;document.querySelectorAll('.ov').forEach(x=>x.remove());toast('Z&E est installée ✓ Retrouvez-la sur votre bureau / écran d’accueil');render()});
+try{const qp=new URLSearchParams(location.search).get('add');if(qp&&['expenses','incomes','savings'].includes(qp)){history.replaceState(null,'',location.pathname+location.hash);setTimeout(()=>{if(!document.body.classList.contains('locked'))openForm(qp)},1200)}}catch(e){}
 addEventListener('online',render);addEventListener('offline',render);
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 refreshCats();applyTheme();route();initCloud();
