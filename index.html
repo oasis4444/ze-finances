@@ -849,8 +849,9 @@ function openForm(col,x={},preset={}){
     <p class="small muted">Les versements d'épargne liés à ce projet s'ajouteront automatiquement au montant économisé.</p>`}
   const o=modal(title,`<form id="frm">${body}<div class="mf" style="padding:6px 0 0"><button type="button" class="btn ghost" data-close>Annuler</button><button class="btn" type="submit">${isNew?'Enregistrer':'Mettre à jour'}</button></div></form>`);
   const f=o.querySelector('#frm');bindSeg(f);bindAmount(f);
-  const nameIn=f.querySelector('[name=name]'),kindSel=f.querySelector('[name=kind]');
-  if(kindSel&&isNew){kindSel.onchange=()=>{const defs={terrain:'Achat du terrain',maison:'Construction de la maison',voiture:"Achat d'une voiture",voyage:'Voyage',investissement:'Investissement',urgence:"Fonds d'urgence",autre:''};if(!nameIn.dataset.touched)nameIn.value=defs[kindSel.value]};nameIn.oninput=()=>nameIn.dataset.touched=1;kindSel.onchange()}
+  f.addEventListener('submit',e=>e.preventDefault());
+  const nameIn=f.querySelector('input[name=name]'),kindSel=col==='goals'?f.querySelector('select[name=kind]'):null;
+  if(kindSel&&nameIn&&isNew){kindSel.onchange=()=>{const defs={terrain:'Achat du terrain',maison:'Construction de la maison',voiture:"Achat d'une voiture",voyage:'Voyage',investissement:'Investissement',urgence:"Fonds d'urgence",autre:''};if(!nameIn.dataset.touched)nameIn.value=defs[kindSel.value]};nameIn.oninput=()=>nameIn.dataset.touched=1;kindSel.onchange()}
   setTimeout(()=>f.querySelector('.amount')?.focus(),50);
   f.onsubmit=e=>{e.preventDefault();const fd=Object.fromEntries(new FormData(f));
     const o2={...x,id:x.id||uid(),createdAt:x.createdAt||Date.now()};
